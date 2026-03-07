@@ -36,7 +36,10 @@ export default async function handler(req, res) {
     }
 
     const message = {
-      data: { title, body },
+      data: {
+        title: title, 
+        body: body 
+      },
       token: fcmToken
     };
 
