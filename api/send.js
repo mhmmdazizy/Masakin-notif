@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     const message = {
-      notification: { 
+      data: { 
         title: title, 
         body: body 
       },
