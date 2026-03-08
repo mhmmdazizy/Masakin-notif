@@ -20,8 +20,9 @@ export default async function handler(req, res) {
   if (!recipientId) return res.status(400).send("ID Penerima Kosong");
 
   try {
+    // === BALIKIN KE MODE 'DATA' BIAR SATPAM BISA PASANG IKON 🔥 ===
     const messagePayload = {
-      notification: { title: title, body: body }
+      data: { title: title, body: body }
     };
 
     // === JURUS SHOTGUN: BROADCAST KE SEMUA USER ===
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
       const usersSnapshot = await admin.firestore().collection("users").get();
       const tokens = [];
       
-      // Sedot semua token dari database
+      // Sedot semua token aktif
       usersSnapshot.forEach(doc => {
         const data = doc.data();
         if (data.fcmToken) tokens.push(data.fcmToken);
@@ -37,14 +38,18 @@ export default async function handler(req, res) {
 
       if (tokens.length === 0) return res.status(404).send("Belum ada user yang punya token.");
 
-      // Tembak serentak pakai fitur Multicast Firebase
-      const multicastMessage = {
-        notification: messagePayload.notification,
-        tokens: tokens // Maksimal 500 token sekali tembak
-      };
+      // === MENGHINDARI ERROR /batch 404 ===
+      // Kita tembak tokennya satu per satu tapi secara paralel (bersamaan)
+      const sendPromises = tokens.map(token => {
+        return admin.messaging().send({
+          data: messagePayload.data,
+          token: token
+        }).catch(e => console.log("Token hangus/error dilewati:", e)); 
+      });
 
-      const response = await admin.messaging().sendMulticast(multicastMessage);
-      return res.status(200).send(`Broadcast sukses ke ${response.successCount} HP!`);
+      // Tunggu semua peluru selesai ditembakkan
+      await Promise.all(sendPromises);
+      return res.status(200).send(`Broadcast paralel sukses ke ${tokens.length} HP!`);
     } 
     
     // === JURUS SNIPER: KIRIM KE 1 USER (KOMENTAR) ===
@@ -55,7 +60,7 @@ export default async function handler(req, res) {
       if (!fcmToken) return res.status(404).send("User belum izinkan notif.");
 
       const singleMessage = {
-        notification: messagePayload.notification,
+        data: messagePayload.data,
         token: fcmToken
       };
 
