@@ -1,6 +1,5 @@
 const admin = require("firebase-admin");
 
-// Mencegah error "App already exists" kalau serverless dipanggil berkali-kali
 if (!admin.apps.length) {
   const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
   admin.initializeApp({
@@ -9,12 +8,10 @@ if (!admin.apps.length) {
 }
 
 export default async function handler(req, res) {
-  // Buka pintu pembatas (CORS) biar bisa ditembak dari web HTML-mu
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Vercel butuh ini untuk ngecek koneksi awal
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -36,7 +33,10 @@ export default async function handler(req, res) {
     }
 
     const message = {
-      notification: { title, body },
+      notification: { 
+        title: title, 
+        body: body 
+      },
       token: fcmToken
     };
 
@@ -44,6 +44,6 @@ export default async function handler(req, res) {
     return res.status(200).send("Berhasil nembak notif Android!");
   } catch (error) {
     console.error("Gagal kirim:", error);
-    return res.status(500).send("Sistem error");
+    return res.status(500).send("Sistem error: " + error.message);
   }
 }
